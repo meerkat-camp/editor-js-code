@@ -17,6 +17,10 @@ export type CodeData = BlockToolData<{
    * The code content input by the user
    */
   code: string;
+  /**
+   * The language of the code block
+   */
+  language: string;
 }>;
 
 /**
@@ -27,6 +31,10 @@ export interface CodeConfig {
    * Placeholder text to display in the input field when it's empty
    */
   placeholder: string;
+  /**
+   * a list of languges
+   */
+  languages: Record<string, string>;
 }
 
 /**
@@ -51,6 +59,8 @@ interface CodeToolNodes {
   holder: HTMLDivElement | null;
   /** Textarea where user inputs their code */
   textarea: HTMLTextAreaElement | null;
+  /** Language selector */
+  languageSelector: HTMLDivElement | null;
 }
 
 /**
@@ -75,7 +85,12 @@ export default class CodeTool implements BlockTool {
    */
   private placeholder: string;
   /**
-   * Collection of CSS class names used by CodeTool for styling its elements
+   * Language options in the dropdown
+   *
+   */
+  private languages: Record<string, string>;
+
+  /* Collection of CSS class names used by CodeTool for styling its elements
    */
   private CSS: CodeToolCSS;
   /**
@@ -118,6 +133,8 @@ export default class CodeTool implements BlockTool {
 
     this.placeholder = this.api.i18n.t(config.placeholder as string || CodeTool.DEFAULT_PLACEHOLDER);
 
+    this.languages = (config.languages as Record<string, string>);
+
     this.CSS = {
       baseClass: this.api.styles.block,
       input: this.api.styles.input,
@@ -128,10 +145,12 @@ export default class CodeTool implements BlockTool {
     this.nodes = {
       holder: null,
       textarea: null,
+      languageSelector: null,
     };
 
     this.data = {
       code: data.code ?? '',
+      language: data.language ?? '',
     };
 
     this.nodes.holder = this.drawView();
@@ -153,6 +172,7 @@ export default class CodeTool implements BlockTool {
   public save(codeWrapper: HTMLDivElement): CodeData {
     return {
       code: codeWrapper.querySelector('textarea')!.value,
+      language: codeWrapper.querySelector('select')!.value,
     };
   }
 
@@ -168,6 +188,7 @@ export default class CodeTool implements BlockTool {
 
       this.data = {
         code: content || '',
+        language: '',
       };
     }
   }
@@ -189,6 +210,10 @@ export default class CodeTool implements BlockTool {
 
     if (this.nodes.textarea) {
       this.nodes.textarea.textContent = data.code;
+    }
+
+    if (this.nodes.languageSelector) {
+      this.nodes.languageSelector.value = data.language;
     }
   }
 
@@ -231,7 +256,9 @@ export default class CodeTool implements BlockTool {
    */
   public static get sanitize(): SanitizerConfig {
     return {
-      code: true, // Allow HTML tags
+      // Allow HTML tags
+      code: true,
+      language: true
     };
   }
 
@@ -296,6 +323,7 @@ export default class CodeTool implements BlockTool {
   private drawView(): HTMLDivElement {
     const wrapper = document.createElement('div');
     const textarea = document.createElement('textarea');
+    const languageSelector = this.languageSelector();
 
     wrapper.classList.add(this.CSS.baseClass, this.CSS.wrapper);
     textarea.classList.add(this.CSS.textarea, this.CSS.input);
@@ -308,6 +336,7 @@ export default class CodeTool implements BlockTool {
     }
 
     wrapper.appendChild(textarea);
+    wrapper.appendChild(languageSelector);
 
     /**
      * Enable keydown handlers
@@ -321,7 +350,41 @@ export default class CodeTool implements BlockTool {
     });
 
     this.nodes.textarea = textarea;
+    this.nodes.languageSelector = languageSelector;
 
     return wrapper;
+  }
+
+  /**
+   * Create the programming language selector dropdown
+   */
+  private languageSelector(): HTMLDivElement {
+    const languageSelector = document.createElement('select');
+
+    languageSelector.addEventListener('change', this.dispatchChangeEvent.bind(this));
+
+    languageSelector.classList.add('ce-code__language-selector');
+
+    for (const key in this.languages) {
+      const option = document.createElement('option');
+
+      option.value = key;
+      option.text = this.languages[key];
+      option.selected = key === this.data.language;
+
+      languageSelector.appendChild(option);
+    }
+
+    const selectWrapper = document.createElement('div');
+    selectWrapper.classList.add('select');
+    selectWrapper.classList.add('is-small');
+
+    selectWrapper.appendChild(languageSelector);
+
+    return selectWrapper;
+  }
+
+  private dispatchChangeEvent(): void {
+    this.api.blocks.getBlockByIndex(this.api.blocks.getCurrentBlockIndex())?.dispatchChange();
   }
 }

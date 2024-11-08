@@ -5,10 +5,17 @@
     line-height: 1.6em;
     font-size: 12px;
     background: #f8f7fa;
-    border: 1px solid #f1f1f4;
     box-shadow: none;
     white-space: pre;
     word-wrap: normal;
     overflow-x: auto;
     resize: vertical;
+}
+
+.ce-code select, .ce-code .select {
+    width: 100%;
+}
+
+.ce-code .select {
+  margin-top: 0.1em;
 }
